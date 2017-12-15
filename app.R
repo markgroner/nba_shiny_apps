@@ -65,18 +65,18 @@ team_roster_url <- 'http://stats.nba.com/stats/commonteamroster?LeagueID=00&Seas
 readTeam_roster <- function(address, season, team_id){
     team_address <- paste0(address, season, '&TeamID=', team_id)
     web_data <- readLines(team_address)
-    
+
     x1 <- gsub('[\\{\\}\\]]', '', web_data, perl = TRUE)
     x2 <- gsub('[\\[]', '\n', x1, perl = TRUE)
     x3 <- gsub('\'rowSet\':\n', '', x2, perl = TRUE)
     x4 <- gsub(';', ',',x3, perl = TRUE)
-    
+
     player_data <- read.table(textConnection(x4), header = TRUE, sep = ',',
                               skip = 2, stringsAsFactors = FALSE, fill = TRUE)
     last_player_position <- which(player_data$TeamID == 'headers:')
     player_data <- player_data[1:(last_player_position - 1),
                                1:ncol(player_data) - 1]
-    
+
     return(player_data)
 }
 
@@ -113,14 +113,14 @@ fetch_shots <- function(player_id, season, location) {
             VsDivision = ''
         )
     )
-    
+
     stop_for_status(request)
-    
+
     data <- content(request)
-    
+
     raw_shots_data <- data$resultSets[[1]]$rowSet
     col_names <- as.character(data$resultSets[[1]]$headers)
-    
+
     if (length(raw_shots_data) == 0) {
         shots <- data.frame(
             matrix(nrow = 0, ncol = length(col_names))
@@ -134,7 +134,7 @@ fetch_shots <- function(player_id, season, location) {
             )
         )
     }
-    
+
     shots <- tbl_df(shots)
     names(shots) <- col_names
     shots <- mutate(shots,
@@ -165,9 +165,9 @@ smoothShotData <- function(shot_data) {
                   FREQ = length(SHOT_TYPE_NUMERIC))
     shot_data_grouped$DISTANCE <- sqrt(shot_data_grouped$LOC_X ^ 2 +
                                            shot_data_grouped$LOC_Y ^ 2)
-    
+
     shot_data_grouped$SMOOTH_eFG <- NA
-    
+
     for (loc in 1:length(shot_data_grouped$LOC_X)) {
         temp_x <- shot_data_grouped$LOC_X[loc]
         temp_y <- shot_data_grouped$LOC_Y[loc]
@@ -184,7 +184,7 @@ smoothShotData <- function(shot_data) {
     }
     shot_data_grouped$CAP_SMOOTH_eFG <- ifelse(shot_data_grouped$SMOOTH_eFG > 1, 1, ifelse(shot_data_grouped$SMOOTH_eFG < 0, 0,
         shot_data_grouped$SMOOTH_eFG))
-    
+
     freq_cap <- length(unique(shot_data$PLAYER_ID))
     shot_data_grouped$CAP_FREQ <- ifelse(shot_data_grouped$FREQ > sort(shot_data_grouped$FREQ,
                                                                           decreasing = TRUE)[freq_cap],
@@ -202,7 +202,7 @@ shots_dark_colors <- c('#4B0082', '#8A2BE2', '#1C86EE', '#66CD00', '#FFE600', '#
 
 ## Function to create shot chart
 shotChartScatter <- function(shot_data, color_gradient) {
-    
+
     if (length(color_gradient) == 7) {
         shot_chart <- try(ggplot(shot_data, aes(x = LOC_X, y = LOC_Y)) +
                               geom_point(shape = 15, aes(size = CAP_FREQ, color = CAP_SMOOTH_eFG)) +
@@ -375,17 +375,17 @@ all_players_stats_3 <- paste0("&SeasonSegment=&SeasonType=Regular+Season&ShotClo
 readPlayer_stats <- function(home_away, season){
     address <- paste0(all_players_stats_1, home_away, all_players_stats_2, season, all_players_stats_3)
     web_page <- readLines(address)
-    
+
     x1 <- gsub("[\\{\\}\\]]", "", web_page, perl = TRUE)
     x2 <- gsub("[\\[]", "\n", x1, perl = TRUE)
     x3 <- gsub("\"rowSet\":\n", "", x2, perl = TRUE)
     x4 <- gsub(";", ",",x3, perl = TRUE)
-    
+
     nba <- read.table(textConnection(x4), header = TRUE, sep = ",", skip = 2,
                       stringsAsFactors = FALSE, fill = TRUE)
-    
+
     nba <- nba[,1:ncol(nba) - 1]
-    
+
     return(nba)
 }
 
@@ -395,7 +395,7 @@ shot_chart_bar_chart <- function(title, nba, overall, zone){
     labels <- c("NBA", "Overall", "Zone")
     stats <- c(nba, overall, zone)
     data <- try(data.frame(labels, stats), silent = T)
-    
+
     try(ggplot(data,
                aes(x = labels,
                    y = stats)) +
@@ -415,7 +415,7 @@ shot_chart_bar_chart <- function(title, nba, overall, zone){
                   panel.border = element_blank(),
                   panel.grid.major.x = element_line(color = '#DCDCDC'),
                   panel.grid.minor = element_blank(),
-                  plot.background = element_blank(), 
+                  plot.background = element_blank(),
                   axis.line.x = element_line(color = "black",
                                              size = .5)) +
             geom_hline(yintercept = 0) +
@@ -592,7 +592,7 @@ server <- function(input, output, session) {
         }
         ## Filter by shot type
         if (input$shot_type == "Three's") {
-            filtered_shots <- filter(filtered_shots, 
+            filtered_shots <- filter(filtered_shots,
                                      SHOT_TYPE  == '3PT Field Goal')
         }
         if (input$shot_type == "Two's") {
@@ -644,66 +644,66 @@ server <- function(input, output, session) {
         NBA_2pt_numeric <- sum(player_stats()$FGM -player_stats()$FG3M) / sum(player_stats()$FGA - player_stats()$FG3A)
         NBA_3pt_numeric <- sum(player_stats()$FG3M) / sum(player_stats()$FG3A)
         NBA_eFG_numeric <- NBA_2pt_numeric*(1-percent_threes) + NBA_3pt_numeric*3/2*percent_threes
-        
+
         all_shots_eFG_numeric <- sum(smoothed_shots()$eFG * (smoothed_shots()$FREQ / sum(smoothed_shots()$FREQ)))
-        
-        
+
+
         zone_data <- brushedPoints(smoothed_shots(), input$shot_zone)
         zone_eFG_numeric <- sum(zone_data$eFG * (zone_data$FREQ / sum(zone_data$FREQ)))
-        
+
         eFG_title <- 'eFG%'
-        
+
         shot_chart_bar_chart(eFG_title, NBA_eFG_numeric, all_shots_eFG_numeric, zone_eFG_numeric)
     })
     ## Create FG% bar chart
     output$FG_bar_chart <- renderPlot({
         NBA_FG_numeric <- sum(player_stats()$FGM) / sum(player_stats()$FGA)
-        
+
         all_shots_FG_numeric <- sum(ifelse(smoothed_shots()$SHOT_TYPE_NUMERIC == 3, smoothed_shots()$eFG/3*2,
                                            smoothed_shots()$eFG) *
                                         (smoothed_shots()$FREQ / sum(smoothed_shots()$FREQ)))
-        
+
         zone_data <- brushedPoints(smoothed_shots(), input$shot_zone)
         zone_FG_numeric <- sum(ifelse(zone_data$SHOT_TYPE_NUMERIC == 3, zone_data$eFG/3*2,
                                       zone_data$eFG) *
                                    (zone_data$FREQ / sum(zone_data$FREQ)))
-        
+
         FG_title <- 'FG%'
-        
+
         shot_chart_bar_chart(FG_title, NBA_FG_numeric, all_shots_FG_numeric, zone_FG_numeric)
     })
     ## Create 3PT% bar chart
     output$FG3_bar_chart <- renderPlot({
         NBA_3pt_numeric <- sum(player_stats()$FG3M) / sum(player_stats()$FG3A)
-        
+
         all_shots_data_3pt <- filter(smoothed_shots(), SHOT_TYPE_NUMERIC == 3)
         all_shots_3ptFG_numeric <- sum(all_shots_data_3pt$eFG/3*2*
                                            (all_shots_data_3pt$FREQ / sum(all_shots_data_3pt$FREQ)))
-        
+
         zone_data <- brushedPoints(smoothed_shots(), input$shot_zone)
         zone_data_3pt <- filter(zone_data, SHOT_TYPE_NUMERIC == 3)
         zone_3ptFG_numeric <- sum(zone_data_3pt$eFG/3*2*
                                       (zone_data_3pt$FREQ / sum(zone_data_3pt$FREQ)))
-        
+
         FG3_title <- '3pt FG%'
-        
+
         shot_chart_bar_chart(FG3_title, NBA_3pt_numeric, all_shots_3ptFG_numeric, zone_3ptFG_numeric)
     })
     ## Create 2PT% bar chart
     output$FG2_bar_chart <- renderPlot({
         NBA_2pt_numeric <- sum(player_stats()$FGM -player_stats()$FG3M) / sum(player_stats()$FGA - player_stats()$FG3A)
-        
+
         all_shots_data_2pt <- filter(smoothed_shots(), SHOT_TYPE_NUMERIC == 2)
         all_shots_2ptFG_numeric <- sum(all_shots_data_2pt$eFG*
-                                           (all_shots_data_2pt$FREQ / sum(all_shots_data_2pt$FREQ)))        
-        
+                                           (all_shots_data_2pt$FREQ / sum(all_shots_data_2pt$FREQ)))
+
         zone_data <- brushedPoints(smoothed_shots(), input$shot_zone)
         zone_data_2pt <- filter(zone_data, SHOT_TYPE_NUMERIC == 2)
         zone_2ptFG_numeric <- sum(zone_data_2pt$eFG*
                                       (zone_data_2pt$FREQ / sum(zone_data_2pt$FREQ)))
-        
+
         FG2_title <- '2pt FG%'
-        
+
         shot_chart_bar_chart(FG2_title, NBA_2pt_numeric, all_shots_2ptFG_numeric, zone_2ptFG_numeric)
     })
     ## Get player data
@@ -711,7 +711,7 @@ server <- function(input, output, session) {
     output$player_data <- renderDataTable({
         filter(roster_data(), PLAYER == input$roster_names)
     })
-    
+
     output$shot_chart_title <- reactive({
         player_data <- filter(roster_data(), PLAYER == input$roster_names)
         shot_chart_title <- HTML(paste("<center>",
@@ -723,12 +723,7 @@ server <- function(input, output, session) {
                                        "</center>"))
         ifelse(length(player_data$PLAYER) == 0, '', shot_chart_title)
     })
-    
+
 }
 
 shinyApp(ui, server)
-
-
-
-
-
