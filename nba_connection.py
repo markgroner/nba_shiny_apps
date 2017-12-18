@@ -28,6 +28,14 @@ def get_nba_com_dataframe(url, params, headers):
     else:
         return main_response_df
 
+def add_season_column(nba_df, season_string):
+    nba_df['SEASON'] = season_string
+    nba_df_columns = nba_df.columns.values.tolist()
+    nba_df_columns.insert(2, 'SEASON')
+    nba_df_columns = nba_df_columns[:-1]
+    nba_df = nba_df[nba_df_columns]
+    return nba_df
+
 
 
 teams_url = 'http://stats.nba.com/stats/leaguedashteamstats'
@@ -62,9 +70,9 @@ teams_params = {'Conference': '',
                 'VsDivision': ''
                 }
 
-teams_df = get_nba_com_dataframe(teams_url, teams_params, headers)
-print(teams_df)
-print(teams_df.columns)
+## teams_df = get_nba_com_dataframe(teams_url, teams_params, headers)
+## print(teams_df)
+## print(teams_df.columns)
 
 cavs_2017_18_team_id = 1610612739
 rosters_url = 'http://stats.nba.com/stats/commonteamroster'
