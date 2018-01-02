@@ -87,35 +87,36 @@ rosters_params = {'LeagueID': '00',
 
 
 kyrie_player_id = 202681
+cavs_2017_18_team_id = 1610612739
 shots_url = 'http://stats.nba.com/stats/shotchartdetail'
 shots_params = {'PlayerID': kyrie_player_id,
-                        'PlayerPosition': '',
-                        'Season': '2017-18',
-                        'ContextMeasure': 'FGA',
-                        'DateFrom': '',
-                        'DateTo': '',
-                        'GameID': '',
-                        'GameSegment': '',
-                        'LastNGames': 0,
-                        'LeagueID': '00',
-                        'Location': '',
-                        'Month': 0,
-                        'OpponentTeamID': 0,
-                        'Outcome': '',
-                        'Period': 0,
-                        'Position': '',
-                        'RookieYear': '',
-                        'SeasonSegment': '',
-                        'SeasonType': 'Regular Season',
-                        'TeamID': 0,
-                        'VsConference': '',
-                        'VsDivision': ''
-                        }
+                'PlayerPosition': '',
+                'Season': '2017-18',
+                'ContextMeasure': 'FGA',
+                'DateFrom': '',
+                'DateTo': '',
+                'GameID': '',
+                'GameSegment': '',
+                'LastNGames': 0,
+                'LeagueID': '00',
+                'Location': '',
+                'OpponentTeamID': 0,
+                'Month': 0,
+                'Outcome': '',
+                'Period': 0,
+                'Position': '',
+                'RookieYear': '',
+                'SeasonSegment': '',
+                'SeasonType': 'Regular Season',
+                'TeamID': 0,
+                'VsConference': '',
+                'VsDivision': ''
+                }
 
 
-## player_shots_df, league_average_shots_df = get_nba_com_dataframe(shots_url, shots_params, headers)
-## print(player_shots_df)
-## print(league_average_shots_df)
+player_shots_df, league_average_shots_df = get_nba_com_dataframe(shots_url, shots_params, headers)
+print(player_shots_df)
+print(league_average_shots_df)
 
 players_url = 'http://stats.nba.com/stats/leaguedashplayerstats'
 players_params = {'College': '',
