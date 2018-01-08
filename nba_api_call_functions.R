@@ -4,7 +4,13 @@ library(dplyr)
 
 
 
-nba_api_request <- function(api_url, parameters, headers) {
+nba_api_request <- function(api_url, parameters) {
+  headers <- c('Accept-Language' = 'en-US,en;q=0.5',
+                'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
+                Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                Referer = 'http://markgroner.com',
+                Connection = 'keep-alive')
+
   request <- GET(
     api_url,
     query = parameters,
@@ -47,35 +53,112 @@ set_numeric_column_type <- function(df, numeric_threshold) {
   return(df)
 }
 
+
+get_nba_shots <- function(player_id, season, location) {
+  shot_chart_url <- 'http://stats.nba.com/stats/shotchartdetail'
+  shot_parameters <- list(
+    PlayerID = player_id,
+    PlayerPosition = '',
+    Season = season,
+    ContextMeasure = 'FGA',
+    DateFrom = '',
+    DateTo = '',
+    GameID = '',
+    GameSegment = '',
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = location,
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    Period = 0,
+    Position = '',
+    RookieYear = '',
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '')
+  shot_df <- nba_api_request(shot_chart_url, shot_parameters)
+  return(shot_df)
+  }
 kyrie_player_id <- 202681
-kyrie_query <- list(
-  PlayerID = kyrie_player_id,
-  PlayerPosition = '',
-  Season = '2016-17',
-  ContextMeasure = 'FGA',
-  DateFrom = '',
-  DateTo = '',
-  GameID = '',
-  GameSegment = '',
-  LastNGames = 0,
-  LeagueID = '00',
-  Location = '',
-  Month = 0,
-  OpponentTeamID = 0,
-  Outcome = '',
-  Period = 0,
-  Position = '',
-  RookieYear = '',
-  SeasonSegment = '',
-  SeasonType = 'Regular Season',
-  TeamID = 0,
-  VsConference = '',
-  VsDivision = '')
-shot_chart_url <- 'http://stats.nba.com/stats/shotchartdetail'
-headers <- c('Accept-Language' = 'en-US,en;q=0.5',
-              'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
-              Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              Referer = 'http://markgroner.com',
-              Connection = 'keep-alive')
-response_df <- nba_api_request(shot_chart_url, kyrie_query, headers)
+## query <- build_shot_chart_parameters(kyrie_player_id, '2016-17', '')
+## kyrie_query <- list(
+##   PlayerID = kyrie_player_id,
+##   PlayerPosition = '',
+##   Season = '2016-17',
+##   ContextMeasure = 'FGA',
+##   DateFrom = '',
+##   DateTo = '',
+##   GameID = '',
+##   GameSegment = '',
+##   LastNGames = 0,
+##   LeagueID = '00',
+##   Location = '',
+##   Month = 0,
+##   OpponentTeamID = 0,
+##   Outcome = '',
+##   Period = 0,
+##   Position = '',
+##   RookieYear = '',
+##   SeasonSegment = '',
+##   SeasonType = 'Regular Season',
+##   TeamID = 0,
+##   VsConference = '',
+##   VsDivision = '')
+
+response_df <- get_nba_shots(kyrie_player_id, '2016-17', '')
 print(response_df)
+
+get_nba_roster <- function(season, team_id) {
+  team_roster_url <- 'http://stats.nba.com/stats/commonteamroster'
+  roster_parameters <- list(
+    LeagueID = '00',
+    Season = season,
+    TeamID = team_id)
+  roster_df <- nba_api_request(team_roster_url, roster_parameters)
+  return(roster_df)
+}
+
+get_player_stats <- function(home_away_flag, season) {
+  player_stats_url <- 'http://stats.nba.com/stats/leaguedashplayerstats'
+  player_stats_parameters <- list(
+    College = '',
+    Conference = '',
+    Country = '',
+    DateFrom = '',
+    DateTo = '',
+    Division = '',
+    DraftPick = '',
+    DraftYear = '',
+    GameScope = '',
+    GameSegment = '',
+    Height = '',
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = home_away_flag,
+    MeasureType = 'Base',
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    PORound = 0,
+    PaceAdjust = 'N',
+    PerMode = 'Totals',
+    Period = 0,
+    PlayerExperience = '',
+    PlayerPosition = '',
+    PlusMinus = 'N',
+    Rank = 'N',
+    Season = season,
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    ShotClockRange = '',
+    StarterBench = '',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '',
+    Weight = '')
+  player_stats_df <- nba_api_request(player_stats_url, player_stats_parameters)
+  return(player_stats_df)
+}

@@ -5,9 +5,9 @@ library(httr)
 library(jsonlite)
 library(scales)
 
-## setwd('C:/Users/markg/onedrive/documents/nba/shot_chart_2')
-seasons_list <- c('2016-17', '2015-16', '2014-15', '2013-14', '2012-13',
-                  '2011-12', '2010-11', '2009-10', '2008-09', '2007-08')
+seasons_list <- c('2017-18', '2016-17', '2015-16', '2014-15', '2013-14',
+                  '2012-13', '2011-12', '2010-11', '2009-10', '2008-09',
+                  '2007-08')
 
 nba_logo_colors <- c('#0046AD', '#D6D6C9', '#D0103A')
 
@@ -21,7 +21,7 @@ default_teams <- read.csv('www/nba_colors.csv', stringsAsFactors = FALSE)[1:30, 
 
 ## Function to set the colors and team list for each season
 set_colors_by_season <- function(season)({
-    if (season %in% c('2016-17', '2015-16', '2014-15')) {
+    if (season %in% c('2017-18', '2016-17', '2015-16', '2014-15')) {
         nba_colors <- clean_nba_colors[1:30,]
     }
     if (season == '2013-14') {
@@ -60,90 +60,99 @@ set_colors_by_season <- function(season)({
     return(nba_colors)
 })
 
-team_roster_url <- 'http://stats.nba.com/stats/commonteamroster?LeagueID=00&Season='
-
-readTeam_roster <- function(address, season, team_id){
-    team_address <- paste0(address, season, '&TeamID=', team_id)
-    web_data <- readLines(team_address)
-
-    x1 <- gsub('[\\{\\}\\]]', '', web_data, perl = TRUE)
-    x2 <- gsub('[\\[]', '\n', x1, perl = TRUE)
-    x3 <- gsub('\'rowSet\':\n', '', x2, perl = TRUE)
-    x4 <- gsub(';', ',',x3, perl = TRUE)
-
-    player_data <- read.table(textConnection(x4), header = TRUE, sep = ',',
-                              skip = 2, stringsAsFactors = FALSE, fill = TRUE)
-    last_player_position <- which(player_data$TeamID == 'headers:')
-    player_data <- player_data[1:(last_player_position - 1),
-                               1:ncol(player_data) - 1]
-
-    return(player_data)
-}
 
 
 ## Function to fetch, merge, and group all lineup shots
 scale_factor <- 12
-fetch_shots <- function(player_id, season, location) {
-    req(player_id)
-    team_lineup_shots <- data.frame()
-    request <- GET(
-        'http://stats.nba.com/stats/shotchartdetail',
-        query = list(
-            PlayerID = player_id,
-            PlayerPosition = '',
-            Season = season,
-            ContextMeasure = 'FGA',
-            DateFrom = '',
-            DateTo = '',
-            GameID = '',
-            GameSegment = '',
-            LastNGames = 0,
-            LeagueID = '00',
-            Location = location,
-            Month = 0,
-            OpponentTeamID = 0,
-            Outcome = '',
-            Period = 0,
-            Position = '',
-            RookieYear = '',
-            SeasonSegment = '',
-            SeasonType = 'Regular Season',
-            TeamID = 0,
-            VsConference = '',
-            VsDivision = ''
-        )
+nba_api_request <- function(api_url, parameters) {
+  headers <- c('Accept-Language' = 'en-US,en;q=0.5',
+                'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
+                Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                Referer = 'http://markgroner.com',
+                Connection = 'keep-alive')
+
+  request <- GET(
+    api_url,
+    query = parameters,
+    add_headers(headers)
     )
-
-    stop_for_status(request)
-
-    data <- content(request)
-
-    raw_shots_data <- data$resultSets[[1]]$rowSet
-    col_names <- as.character(data$resultSets[[1]]$headers)
-
-    if (length(raw_shots_data) == 0) {
-        shots <- data.frame(
-            matrix(nrow = 0, ncol = length(col_names))
-        )
-    } else {
-        shots = data.frame(
-            matrix(
-                unlist(raw_shots_data),
-                ncol = length(col_names),
-                byrow = TRUE
-            )
-        )
-    }
-
-    shots <- tbl_df(shots)
-    names(shots) <- col_names
-    shots <- mutate(shots,
-                    PERIOD = as.numeric(as.character(PERIOD)),
-                    SHOT_DISTANCE = as.numeric(as.character(SHOT_DISTANCE)),
-                    SHOT_MADE_NUMERIC = as.numeric(as.character(SHOT_MADE_FLAG)),
-                    SHOT_ATTEMPTED_FLAG = as.numeric(as.character(SHOT_ATTEMPTED_FLAG)))
-    return(shots)
+  request_status <- stop_for_status(request)
+  data <- content(request)
+  main_result_json <- data$resultSets[[1]]
+  rowset_data <- main_result_json$rowSet
+  column_headers <- as.character(main_result_json$headers)
+  response_df = data.frame(
+      matrix(
+          unlist(rowset_data),
+          ncol = length(column_headers),
+          byrow = TRUE
+      ),
+      stringsAsFactors = FALSE)
+  names(response_df) <- column_headers
+  response_df <- set_numeric_column_type(response_df, .9)
+  return(response_df)
 }
+
+
+## numeric_threshold if this percentage of values in a column can be coerced to numeric, switch column type
+set_numeric_column_type <- function(df, numeric_threshold) {
+  for (column_name in colnames(df)) {
+    name_length <- nchar(column_name)
+    if (substr(column_name, name_length - 2, name_length) == '_ID') {
+      ## pass
+    } else {
+        numeric_test_column <- as.numeric(df[[column_name]])
+        total_values <- NROW(numeric_test_column)
+        non_na_values <- NROW(na.omit(numeric_test_column))
+        perc_non_na <- non_na_values / total_values
+        if (perc_non_na >= numeric_threshold) {
+          df[[column_name]] <- numeric_test_column
+        }
+    }
+  }
+  return(df)
+}
+
+
+get_nba_roster <- function(season, team_id) {
+  team_roster_url <- 'http://stats.nba.com/stats/commonteamroster'
+  roster_parameters <- list(
+    LeagueID = '00',
+    Season = season,
+    TeamID = team_id)
+  roster_df <- nba_api_request(team_roster_url, roster_parameters)
+  return(roster_df)
+}
+
+
+get_nba_shots <- function(player_id, season, location) {
+  shot_chart_url <- 'http://stats.nba.com/stats/shotchartdetail'
+  shot_parameters <- list(
+    PlayerID = player_id,
+    PlayerPosition = '',
+    Season = season,
+    ContextMeasure = 'FGA',
+    DateFrom = '',
+    DateTo = '',
+    GameID = '',
+    GameSegment = '',
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = location,
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    Period = 0,
+    Position = '',
+    RookieYear = '',
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '')
+  shot_df <- nba_api_request(shot_chart_url, shot_parameters)
+  return(shot_df)
+  }
 
 
 
@@ -365,30 +374,48 @@ shotChartScatter <- function(shot_data, color_gradient) {
 }
 
 
-all_players_stats_1 <- paste0("http://stats.nba.com/stats/leaguedashplayerstats?College=&Conference=&Country=&DateFrom=&DateTo=02%2F19%2F2017&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=&Height=&LastNGames=0&LeagueID=00&Location=")
-all_players_stats_2 <- paste0("&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=Totals&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=")
-all_players_stats_3 <- paste0("&SeasonSegment=&SeasonType=Regular+Season&ShotClockRange=&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight=")
-
-##"http://stats.nba.com/stats/leaguedashplayerstats?College=&Conference=&Country=&DateFrom=&DateTo=02%2F19%2F2017&Division=&DraftPick=&DraftYear=&GameScope=&GameSegment=&Height=&LastNGames=0&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=Totals&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2016-17&SeasonSegment=&SeasonType=Regular+Season&ShotClockRange=&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight="
-
-## Function import and clean player data from NBA.com
-readPlayer_stats <- function(home_away, season){
-    address <- paste0(all_players_stats_1, home_away, all_players_stats_2, season, all_players_stats_3)
-    web_page <- readLines(address)
-
-    x1 <- gsub("[\\{\\}\\]]", "", web_page, perl = TRUE)
-    x2 <- gsub("[\\[]", "\n", x1, perl = TRUE)
-    x3 <- gsub("\"rowSet\":\n", "", x2, perl = TRUE)
-    x4 <- gsub(";", ",",x3, perl = TRUE)
-
-    nba <- read.table(textConnection(x4), header = TRUE, sep = ",", skip = 2,
-                      stringsAsFactors = FALSE, fill = TRUE)
-
-    nba <- nba[,1:ncol(nba) - 1]
-
-    return(nba)
+## Function import player data from NBA.com
+get_player_stats <- function(home_away_flag, season) {
+  player_stats_url <- 'http://stats.nba.com/stats/leaguedashplayerstats'
+  player_stats_parameters <- list(
+    College = '',
+    Conference = '',
+    Country = '',
+    DateFrom = '',
+    DateTo = '',
+    Division = '',
+    DraftPick = '',
+    DraftYear = '',
+    GameScope = '',
+    GameSegment = '',
+    Height = '',
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = home_away_flag,
+    MeasureType = 'Base',
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    PORound = 0,
+    PaceAdjust = 'N',
+    PerMode = 'Totals',
+    Period = 0,
+    PlayerExperience = '',
+    PlayerPosition = '',
+    PlusMinus = 'N',
+    Rank = 'N',
+    Season = season,
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    ShotClockRange = '',
+    StarterBench = '',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '',
+    Weight = '')
+  player_stats_df <- nba_api_request(player_stats_url, player_stats_parameters)
+  return(player_stats_df)
 }
-
 
 ## Function to create horizontal bar charts
 shot_chart_bar_chart <- function(title, nba, overall, zone){
@@ -435,7 +462,7 @@ ui <- fluidPage(theme = "legronjames.css",
                            selectInput('season',
                                        'Season:',
                                        seasons_list,
-                                       '2016-17')),
+                                       seasons_list[0])),
                     ## Team selection
                     column(width = 3,
                            style = 'padding-left:12px;',
@@ -536,9 +563,9 @@ server <- function(input, output, session) {
     })
     ## Set list of teams
     roster_data <- reactive({
-        readTeam_roster(team_roster_url, input$season,
-                        filter(nba_colors(),
-                               name == input$team)$team_id_2016)
+        get_nba_roster(input$season,
+                       filter(nba_colors(),
+                       name == input$team)$team_id_2016)
     })
     ## Set roster player list
     observe({
@@ -561,7 +588,7 @@ server <- function(input, output, session) {
         if (input$home_road_flag == 'Road') {
             location <- 'Road'
         }
-        fetch_shots(player_ids, input$season, location)
+        get_nba_shots(player_ids, input$season, location)
     })
     ## Filter shots
     filtered_shots <- reactive({
@@ -636,7 +663,7 @@ server <- function(input, output, session) {
         if (input$home_road_flag == 'Road') {
             location <- 'Road'
         }
-        readPlayer_stats(location, input$season)
+        get_player_stats(location, input$season)
     })
     ## Create eFG% bar chart
     output$eFG_bar_chart <- renderPlot({
