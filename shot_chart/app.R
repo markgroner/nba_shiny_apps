@@ -156,15 +156,12 @@ get_nba_shots <- function(player_id, season, location) {
 
 ## Function to smooth shot chart data
 smoothShotData <- function(shot_data) {
-    shot_data$LOC_X <- round((as.numeric(as.character(shot_data$LOC_X))/10*12)
-                             /scale_factor, 0)
-    shot_data$LOC_Y <- round((as.numeric(as.character(shot_data$LOC_Y))/10*12)
-                             /scale_factor, 0) + 15/scale_factor
+    shot_data$LOC_X <- round((shot_data$LOC_X/10*12)/scale_factor, 0)
+    shot_data$LOC_Y <- round((shot_data$LOC_Y/10*12)/scale_factor, 0) + 15/scale_factor
     shot_data$SHOT_TYPE_NUMERIC <- ifelse(as.character(shot_data$SHOT_TYPE) ==
                                               '3PT Field Goal',
                                           3, 2)
-    shot_data$SHOT_VALUE <- (as.numeric(as.character(shot_data$SHOT_MADE_FLAG))
-                             * shot_data$SHOT_TYPE_NUMERIC)
+    shot_data$SHOT_VALUE <- (shot_data$SHOT_MADE_FLAG * shot_data$SHOT_TYPE_NUMERIC)
     shot_data$eFG <- shot_data$SHOT_VALUE/2
     shot_data_grouped <- shot_data %>%
         group_by(LOC_X, LOC_Y, SHOT_TYPE_NUMERIC) %>%
