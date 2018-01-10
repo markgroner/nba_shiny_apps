@@ -82,7 +82,7 @@ get_nba_shots <- function(player_id, season, location) {
   shot_df <- nba_api_request(shot_chart_url, shot_parameters)
   return(shot_df)
   }
-kyrie_player_id <- 202681
+
 ## query <- build_shot_chart_parameters(kyrie_player_id, '2016-17', '')
 ## kyrie_query <- list(
 ##   PlayerID = kyrie_player_id,
@@ -108,8 +108,6 @@ kyrie_player_id <- 202681
 ##   VsConference = '',
 ##   VsDivision = '')
 
-response_df <- get_nba_shots(kyrie_player_id, '2016-17', '')
-print(response_df)
 
 get_nba_roster <- function(season, team_id) {
   team_roster_url <- 'http://stats.nba.com/stats/commonteamroster'
@@ -162,3 +160,17 @@ get_player_stats <- function(home_away_flag, season) {
   player_stats_df <- nba_api_request(player_stats_url, player_stats_parameters)
   return(player_stats_df)
 }
+
+get_shots_lineup_shots <- function(player_id_list, season, location) {
+    team_lineup_shots <- data.frame()
+    for (player_id in player_id_list) {
+        player_lineup_shots <- get_nba_shots(player_id, season, location)
+        team_lineup_shots <- rbind(team_lineup_shots, player_lineup_shots)
+    }
+    return(team_lineup_shots)
+}
+kyrie_player_id <- 202681
+response_df <- get_nba_shots(kyrie_player_id, '2016-17', '')
+print(NROW(response_df))
+response_df <- get_shots_lineup_shots(c(kyrie_player_id, kyrie_player_id), '2016-17', '')
+print(NROW(response_df))

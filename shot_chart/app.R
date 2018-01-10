@@ -61,9 +61,6 @@ set_colors_by_season <- function(season)({
 })
 
 
-
-## Function to fetch, merge, and group all lineup shots
-scale_factor <- 12
 nba_api_request <- function(api_url, parameters) {
   headers <- c('Accept-Language' = 'en-US,en;q=0.5',
                 'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
@@ -124,7 +121,8 @@ get_nba_roster <- function(season, team_id) {
   return(roster_df)
 }
 
-
+## Function to fetch, merge, and group all lineup shots
+scale_factor <- 12
 get_nba_shots <- function(player_id, season, location) {
   shot_chart_url <- 'http://stats.nba.com/stats/shotchartdetail'
   shot_parameters <- list(
@@ -152,7 +150,7 @@ get_nba_shots <- function(player_id, season, location) {
     VsDivision = '')
   shot_df <- nba_api_request(shot_chart_url, shot_parameters)
   return(shot_df)
-  }
+}
 
 
 
