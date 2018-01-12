@@ -3,10 +3,9 @@ library(jsonlite)
 library(dplyr)
 
 
-
 nba_api_request <- function(api_url, parameters) {
   headers <- c('Accept-Language' = 'en-US,en;q=0.5',
-                'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
+              'User-Agent' = 'Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0',
                 Accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 Referer = 'http://markgroner.com',
                 Connection = 'keep-alive')
@@ -16,7 +15,7 @@ nba_api_request <- function(api_url, parameters) {
     query = parameters,
     add_headers(headers)
     )
-  request_status <- stop_for_status(request)
+  request_status <- message_for_status(request)
   data <- content(request)
   main_result_json <- data$resultSets[[1]]
   rowset_data <- main_result_json$rowSet
@@ -81,7 +80,7 @@ get_nba_shots <- function(player_id, season, location) {
     VsDivision = '')
   shot_df <- nba_api_request(shot_chart_url, shot_parameters)
   return(shot_df)
-  }
+}
 
 ## query <- build_shot_chart_parameters(kyrie_player_id, '2016-17', '')
 ## kyrie_query <- list(
@@ -161,7 +160,7 @@ get_player_stats <- function(home_away_flag, season) {
   return(player_stats_df)
 }
 
-get_shots_lineup_shots <- function(player_id_list, season, location) {
+get_lineup_shots <- function(player_id_list, season, location) {
     team_lineup_shots <- data.frame()
     for (player_id in player_id_list) {
         player_lineup_shots <- get_nba_shots(player_id, season, location)
@@ -169,8 +168,47 @@ get_shots_lineup_shots <- function(player_id_list, season, location) {
     }
     return(team_lineup_shots)
 }
-kyrie_player_id <- 202681
-response_df <- get_nba_shots(kyrie_player_id, '2016-17', '')
-print(NROW(response_df))
-response_df <- get_shots_lineup_shots(c(kyrie_player_id, kyrie_player_id), '2016-17', '')
-print(NROW(response_df))
+
+## kyrie_player_id <- 202681
+## response_df <- get_nba_shots(kyrie_player_id, '2016-17', '')
+## print(NROW(response_df))
+## response_df <- get_lineup_shots(c(kyrie_player_id, kyrie_player_id), '2016-17', '')
+## print(NROW(response_df))
+
+get_lineup_stats <- function(measure_type, season, home_away_flag) {
+  lineup_stats_url <- 'http://stats.nba.com/stats/leaguedashlineups'
+  lineup_stats_parameters <- list(
+    Conference = '',
+    DateFrom = '',
+    DateTo = '',
+    Division = '',
+    GameID = '',
+    GameSegment = '',
+    GroupQuantity = 5,
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = home_away_flag,
+    MeasureType = measure_type,
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    PORound = 0,
+    PaceAdjust = 'N',
+    PerMode = 'Totals',
+    Period = 0,
+    PlusMinus = 'N',
+    Rank = 'N',
+    Season = season,
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    ShotClockRange = '',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '')
+  ## print(is.recursive(lineup_stats_parameters))
+  lineup_stats_df <- nba_api_request(lineup_stats_url, lineup_stats_parameters)
+  return(lineup_stats_df)
+}
+
+lineup_stats_df <- get_lineup_stats('Advanced', '2017-18', '')
+print(lineup_stats_df)
