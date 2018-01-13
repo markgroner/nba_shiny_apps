@@ -8,8 +8,9 @@ library(jsonlite)
 
 
 ## setwd('C:/Users/markg/onedrive/documents/nba/lineup_comparison_2')
-seasons_list <- c('2016-17', '2015-16', '2014-15', '2013-14', '2012-13',
-                  '2011-12', '2010-11', '2009-10', '2008-09', '2007-08')
+seasons_list <- c('2017-18', '2016-17', '2015-16', '2014-15', '2013-14',
+                  '2012-13', '2011-12', '2010-11', '2009-10', '2008-09',
+                  '2007-08')
 
 nba_logo_colors <- c('#0046AD', '#D6D6C9', '#D0103A')
 
@@ -24,7 +25,7 @@ default_teams <- raw_nba_colors[1:30, 1]
 
 ## Function to set the colors and team list for each season
 set_colors_by_season <- function(season)({
-    if (season %in% c('2016-17', '2015-16', '2014-15')) {
+    if (season %in% c('2017-18', '2016-17', '2015-16', '2014-15')) {
         nba_colors <- raw_nba_colors[1:30,]
     }
     if (season == '2013-14') {
@@ -115,126 +116,40 @@ set_numeric_column_type <- function(df, numeric_threshold) {
 
 
 ## Function import and clean lineup data from NBA.com
-readNBA_lineup <- function(address_1, season, address_2){
-    address <- paste0(address_1, season, address_2)
-    web_page <- readLines(address)
-
-    x1 <- gsub("[\\{\\}\\]]", "", web_page, perl = TRUE)
-    x2 <- gsub("[\\[]", "\n", x1, perl = TRUE)
-    x3 <- gsub("\"rowSet\":\n", "", x2, perl = TRUE)
-    x4 <- gsub(";", ",",x3, perl = TRUE)
-
-    nba <- read.table(textConnection(x4), header = TRUE, sep = ",", skip = 2,
-                      stringsAsFactors = FALSE, fill = TRUE)
-
-    nba <- nba[,1:ncol(nba) - 1]
-
-    return(nba)
+get_lineup_stats <- function(measure_type, season, home_away_flag, per_mode) {
+  lineup_stats_url <- 'http://stats.nba.com/stats/leaguedashlineups'
+  lineup_stats_parameters <- list(
+    Conference = '',
+    DateFrom = '',
+    DateTo = '',
+    Division = '',
+    GameID = '',
+    GameSegment = '',
+    GroupQuantity = 5,
+    LastNGames = 0,
+    LeagueID = '00',
+    Location = home_away_flag,
+    MeasureType = measure_type,
+    Month = 0,
+    OpponentTeamID = 0,
+    Outcome = '',
+    PORound = 0,
+    PaceAdjust = 'N',
+    PerMode = per_mode,
+    Period = 0,
+    PlusMinus = 'N',
+    Rank = 'N',
+    Season = season,
+    SeasonSegment = '',
+    SeasonType = 'Regular Season',
+    ShotClockRange = '',
+    TeamID = 0,
+    VsConference = '',
+    VsDivision = '')
+  lineup_stats_df <- nba_api_request(lineup_stats_url, lineup_stats_parameters)
+  return(lineup_stats_df)
 }
 
-
-
-lineup_advanced_url_1 <- paste0("http://stats.nba.com/stats/leaguedashlineups",
-                                "?Conference=&DateFrom=&DateTo=&Division=&Gam",
-                                "eID=&GameSegment=&GroupQuantity=5&LastNGames",
-                                "=0&LeagueID=00&Location=&MeasureType=Advance",
-                                "d&Month=0&OpponentTeamID=0&Outcome=&PORound=",
-                                "0&PaceAdjust=N&PerMode=Totals&Period=0&PlusM",
-                                "inus=N&Rank=N&Season=")
-lineup_advanced_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season&Sh",
-                                "otClockRange=&TeamID=0&VsConference=&VsDivis",
-                                "ion=")
-
-lineup_advanced_home_url_1 <- paste0("http://stats.nba.com/stats/leaguedashli",
-                                     "neups?Conference=&DateFrom=&DateTo=&Div",
-                                     "ision=&GameID=&GameSegment=&GroupQuanti",
-                                     "ty=5&LastNGames=0&LeagueID=00&Location=",
-                                     "Home&MeasureType=Advanced&Month=0&Oppon",
-                                     "entTeamID=0&Outcome=&PORound=0&PaceAdju",
-                                     "st=N&PerMode=Totals&Period=0&PlusMinus=",
-                                     "N&Rank=N&Season=")
-lineup_advanced_home_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Seas",
-                                     "on&ShotClockRange=&TeamID=0&VsConferenc",
-                                     "e=&VsDivision=")
-
-lineup_advanced_away_url_1 <- paste0("http://stats.nba.com/stats/leaguedashli",
-                                     "neups?Conference=&DateFrom=&DateTo=&Div",
-                                     "ision=&GameID=&GameSegment=&GroupQuanti",
-                                     "ty=5&LastNGames=0&LeagueID=00&Location=",
-                                     "Road&MeasureType=Advanced&Month=0&Oppon",
-                                     "entTeamID=0&Outcome=&PORound=0&PaceAdju",
-                                     "st=N&PerMode=Totals&Period=0&PlusMinus=",
-                                     "N&Rank=N&Season=")
-lineup_advanced_away_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Seas",
-                                     "on&ShotClockRange=&TeamID=0&VsConferenc",
-                                     "e=&VsDivision=")
-
-lineup_per_100_url_1 <- paste0("http://stats.nba.com/stats/leaguedashlineups?",
-                               "Conference=&DateFrom=&DateTo=&Division=&GameI",
-                               "D=&GameSegment=&GroupQuantity=5&LastNGames=0&",
-                               "LeagueID=00&Location=&MeasureType=Base&Month=",
-                               "0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdj",
-                               "ust=N&PerMode=Per100Possessions&Period=0&Plus",
-                               "Minus=N&Rank=N&Season=")
-lineup_per_100_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season&Sho",
-                               "tClockRange=&TeamID=0&VsConference=&VsDivisio",
-                               "n=")
-
-lineup_per_100_home_url_1 <- paste0("http://stats.nba.com/stats/leaguedashline",
-                                    "ups?Conference=&DateFrom=&DateTo=&Divisio",
-                                    "n=&GameID=&GameSegment=&GroupQuantity=5&L",
-                                    "astNGames=0&LeagueID=00&Location=Home&Mea",
-                                    "sureType=Base&Month=0&OpponentTeamID=0&Ou",
-                                    "tcome=&PORound=0&PaceAdjust=N&PerMode=Per",
-                                    "100Possessions&Period=0&PlusMinus=N&Rank=",
-                                    "N&Season=")
-lineup_per_100_home_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season",
-                                    "&ShotClockRange=&TeamID=0&VsConference=&V",
-                                    "sDivision=")
-
-lineup_per_100_away_url_1 <- paste0("http://stats.nba.com/stats/leaguedashline",
-                                    "ups?Conference=&DateFrom=&DateTo=&Divisio",
-                                    "n=&GameID=&GameSegment=&GroupQuantity=5&L",
-                                    "astNGames=0&LeagueID=00&Location=Road&Mea",
-                                    "sureType=Base&Month=0&OpponentTeamID=0&Ou",
-                                    "tcome=&PORound=0&PaceAdjust=N&PerMode=Per",
-                                    "100Possessions&Period=0&PlusMinus=N&Rank=",
-                                    "N&Season=")
-lineup_per_100_away_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season",
-                                    "&ShotClockRange=&TeamID=0&VsConference=&V",
-                                    "sDivision=")
-
-lineup_scoring_url_1 <- paste0("http://stats.nba.com/stats/leaguedashlineups?C",
-                               "onference=&DateFrom=&DateTo=&Division=&GameID=",
-                               "&GameSegment=&GroupQuantity=5&LastNGames=0&Lea",
-                               "gueID=00&Location=&MeasureType=Scoring&Month=0",
-                               "&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjus",
-                               "t=N&PerMode=Totals&Period=0&PlusMinus=N&Rank=N",
-                               "&Season=")
-lineup_scoring_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season&Shot",
-                               "ClockRange=&TeamID=0&VsConference=&VsDivision=")
-
-lineup_scoring_home_url_1 <- paste0("http://stats.nba.com/stats/leaguedashline",
-                                    "ups?Conference=&DateFrom=&DateTo=&Divisio",
-                                    "n=&GameID=&GameSegment=&GroupQuantity=5&L",
-                                    "astNGames=0&LeagueID=00&Location=Home&Mea",
-                                    "sureType=Scoring&Month=0&OpponentTeamID=0",
-                                    "&Outcome=&PORound=0&PaceAdjust=N&PerMode=",
-                                    "Totals&Period=0&PlusMinus=N&Rank=N&Season=")
-lineup_scoring_home_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season",
-                                    "&ShotClockRange=&TeamID=0&VsConference=&V",
-                                    "sDivision=")
-
-lineup_scoring_away_url_1 <- paste0("http://stats.nba.com/stats/leaguedashline",
-                                    "ups?Conference=&DateFrom=&DateTo=&Divisio",
-                                    "n=&GameID=&GameSegment=&GroupQuantity=5&L",
-                                    "astNGames=0&LeagueID=00&Location=Road&Mea",
-                                    "sureType=Scoring&Month=0&OpponentTeamID=0",
-                                    "&Outcome=&PORound=0&PaceAdjust=N&PerMode=",
-                                    "Totals&Period=0&PlusMinus=N&Rank=N&Season=")
-lineup_scoring_away_url_2 <- paste0("&SeasonSegment=&SeasonType=Regular+Season",
-                                    "&ShotClockRange=&TeamID=0&VsConference=&V",
-                                    "sDivision=")
 
 ## Function to fetch, merge, and group all lineup shots
 scale_factor <- 12
@@ -279,15 +194,12 @@ get_lineup_shots <- function(player_id_list, season, location) {
 
 ## Function to smooth shot chart data
 smoothShotData <- function(shot_data) {
-    shot_data$LOC_X <- round((as.numeric(as.character(shot_data$LOC_X))/10*12)
-                             /scale_factor, 0)
-    shot_data$LOC_Y <- round((as.numeric(as.character(shot_data$LOC_Y))/10*12)
-                             /scale_factor, 0) + 15/scale_factor
+    shot_data$LOC_X <- round((shot_data$LOC_X/10*12)/scale_factor, 0)
+    shot_data$LOC_Y <- round((shot_data$LOC_Y/10*12)/scale_factor, 0) + 15/scale_factor
     shot_data$SHOT_TYPE_NUMERIC <- ifelse(as.character(shot_data$SHOT_TYPE) ==
                                               '3PT Field Goal',
                                           3, 2)
-    shot_data$SHOT_VALUE <- (as.numeric(as.character(shot_data$SHOT_MADE_FLAG))
-                             * shot_data$SHOT_TYPE_NUMERIC)
+    shot_data$SHOT_VALUE <- (shot_data$SHOT_MADE_FLAG * shot_data$SHOT_TYPE_NUMERIC)
     shot_data$eFG <- shot_data$SHOT_VALUE/2
     shot_data_grouped <- shot_data %>%
         group_by(LOC_X, LOC_Y, SHOT_TYPE_NUMERIC) %>%
@@ -313,13 +225,13 @@ smoothShotData <- function(shot_data) {
                                                      temp_filtered$eFG)
     }
     shot_data_grouped$CAP_SMOOTH_eFG <- ifelse(shot_data_grouped$SMOOTH_eFG > 1, 1, ifelse(shot_data_grouped$SMOOTH_eFG < 0, 0,
-                                                                                           shot_data_grouped$SMOOTH_eFG))
+        shot_data_grouped$SMOOTH_eFG))
 
     freq_cap <- length(unique(shot_data$PLAYER_ID))
     shot_data_grouped$CAP_FREQ <- ifelse(shot_data_grouped$FREQ > sort(shot_data_grouped$FREQ,
-                                                                       decreasing = TRUE)[freq_cap],
-                                         sort(shot_data_grouped$FREQ, decreasing = TRUE)[freq_cap],
-                                         shot_data_grouped$FREQ)
+                                                                          decreasing = TRUE)[freq_cap],
+                                            sort(shot_data_grouped$FREQ, decreasing = TRUE)[freq_cap],
+                                            shot_data_grouped$FREQ)
     return(shot_data_grouped)
 }
 
@@ -426,19 +338,15 @@ server <- function(input, output, session) {
     ## Set team lineup advanced stats based on home away flag
     team_lineup_advanced_master <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            team_lineup_advanced_master <- readNBA_lineup(lineup_advanced_url_1,
-                                                          input$team_season,
-                                                          lineup_advanced_url_2)
-        }
-        if (input$home_road_flag == "Home") {
-            team_lineup_advanced_master <- readNBA_lineup(lineup_advanced_home_url_1,
-                                                          input$team_season,
-                                                          lineup_advanced_home_url_2)
-        }
-        if (input$home_road_flag == "Road") {
-            team_lineup_advanced_master <- readNBA_lineup(lineup_advanced_away_url_1,
-                                                          input$team_season,
-                                                          lineup_advanced_away_url_2)
+            team_lineup_advanced_master <- get_lineup_stats('Advanced',
+                                                            input$team_season,
+                                                            '',
+                                                            'Totals')
+        } else {
+            team_lineup_advanced_master <- get_lineup_stats('Advanced',
+                                                            input$team_season,
+                                                            input$home_road_flag,
+                                                            'Totals')
         }
         team_lineup_advanced_master
     })
@@ -458,44 +366,34 @@ server <- function(input, output, session) {
     ## Set team lineup per 100 stats based on home away flag
     team_lineup_per_100_stats <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            team_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_url_1,
-                                                               input$team_season,
-                                                               lineup_per_100_url_2),
+            team_lineup_per_100_stats <- subset(get_lineup_stats('Base',
+                                                                 input$team_season,
+                                                                 '',
+                                                                 'Per100Possessions'),
                                                 GROUP_NAME == input$team_lineup)
-        }
-        if (input$home_road_flag == "Home") {
-            team_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_home_url_1,
+        } else {
+          team_lineup_per_100_stats <- subset(get_lineup_stats('Base',
                                                                input$team_season,
-                                                               lineup_per_100_home_url_2),
-                                                GROUP_NAME == input$team_lineup)
-        }
-        if (input$home_road_flag == "Road") {
-            team_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_away_url_1,
-                                                               input$team_season,
-                                                               lineup_per_100_away_url_2),
-                                                GROUP_NAME == input$team_lineup)
+                                                               input$home_road_flag,
+                                                               'Per100Possessions'),
+                                              GROUP_NAME == input$team_lineup)
         }
         team_lineup_per_100_stats
     })
     ## Set team lineup scoring stats based on home away flag
     team_lineup_scoring_stats <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            team_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_url_1,
-                                                               input$team_season,
-                                                               lineup_scoring_url_2),
+            team_lineup_scoring_stats <- subset(get_lineup_stats('Scoring',
+                                                                 input$team_season,
+                                                                 '',
+                                                                 'Totals'),
                                                 GROUP_NAME == input$team_lineup)
-        }
-        if (input$home_road_flag == "Home") {
-            team_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_home_url_1,
+        } else {
+          team_lineup_scoring_stats <- subset(get_lineup_stats('Scoring',
                                                                input$team_season,
-                                                               lineup_scoring_home_url_2),
-                                                GROUP_NAME == input$team_lineup)
-        }
-        if (input$home_road_flag == "Road") {
-            team_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_away_url_1,
-                                                               input$team_season,
-                                                               lineup_scoring_away_url_2),
-                                                GROUP_NAME == input$team_lineup)
+                                                               input$home_road_flag,
+                                                               'Totals'),
+                                              GROUP_NAME == input$team_lineup)
         }
         team_lineup_scoring_stats
     })
@@ -518,19 +416,15 @@ server <- function(input, output, session) {
     ## Set opponent lineup advanced stats based on home away flag
     opponent_lineup_advanced_master <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            opponent_lineup_advanced_master <- readNBA_lineup(lineup_advanced_url_1,
+            opponent_lineup_advanced_master <- get_lineup_stats('Advanced',
+                                                                input$opponent_season,
+                                                                '',
+                                                                'Totals')
+        } else {
+          opponent_lineup_advanced_master <- get_lineup_stats('Advanced',
                                                               input$opponent_season,
-                                                              lineup_advanced_url_2)
-        }
-        if (input$home_road_flag == "Road") {
-            opponent_lineup_advanced_master <- readNBA_lineup(lineup_advanced_home_url_1,
-                                                              input$opponent_season,
-                                                              lineup_advanced_home_url_2)
-        }
-        if (input$home_road_flag == "Home") {
-            opponent_lineup_advanced_master <- readNBA_lineup(lineup_advanced_away_url_1,
-                                                              input$opponent_season,
-                                                              lineup_advanced_away_url_2)
+                                                              input$home_road_flag,
+                                                              'Totals')
         }
         opponent_lineup_advanced_master
     })
@@ -550,44 +444,34 @@ server <- function(input, output, session) {
     ## Set opponent lineup per 100 stats based on home away flag
     opponent_lineup_per_100_stats <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            opponent_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_per_100_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
-        }
-        if (input$home_road_flag == "Road") {
-            opponent_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_home_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_per_100_home_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
-        }
-        if (input$home_road_flag == "Home") {
-            opponent_lineup_per_100_stats <- subset(readNBA_lineup(lineup_per_100_away_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_per_100_away_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
+            opponent_lineup_per_100_stats <- subset(get_lineup_stats('Base',
+                                                                 input$opponent_season,
+                                                                 '',
+                                                                 'Per100Possessions'),
+                                                GROUP_NAME == input$opponent_lineup)
+        } else {
+          opponent_lineup_per_100_stats <- subset(get_lineup_stats('Base',
+                                                               input$opponent_season,
+                                                               input$home_road_flag,
+                                                               'Per100Possessions'),
+                                              GROUP_NAME == input$opponent_lineup)
         }
         opponent_lineup_per_100_stats
     })
     ## Set opponent lineup scoring stats based on home away flag
     opponent_lineup_scoring_stats <- reactive({
         if (input$home_road_flag == "Neutral Site") {
-            opponent_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_scoring_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
-        }
-        if (input$home_road_flag == "Road") {
-            opponent_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_home_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_scoring_home_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
-        }
-        if (input$home_road_flag == "Home") {
-            opponent_lineup_scoring_stats <- subset(readNBA_lineup(lineup_scoring_away_url_1,
-                                                                   input$opponent_season,
-                                                                   lineup_scoring_away_url_2),
-                                                    GROUP_NAME == input$opponent_lineup)
+            opponent_lineup_scoring_stats <- subset(get_lineup_stats('Scoring',
+                                                                 input$opponent_season,
+                                                                 '',
+                                                                 'Totals'),
+                                                GROUP_NAME == input$opponent_lineup)
+        } else {
+          opponent_lineup_scoring_stats <- subset(get_lineup_stats('Scoring',
+                                                               input$opponent_season,
+                                                               input$home_road_flag,
+                                                               'Totals'),
+                                              GROUP_NAME == input$opponent_lineup)
         }
         opponent_lineup_scoring_stats
     })
@@ -913,7 +797,7 @@ ui <- fluidPage(theme = "legronjames.css",
                                       selectInput("team_season",
                                                   "Team Season:",
                                                   seasons_list,
-                                                  '2016-17')
+                                                  '2017-18')
 
                                ),
                                ## Team selection
@@ -966,7 +850,7 @@ ui <- fluidPage(theme = "legronjames.css",
                                       selectInput("opponent_season",
                                                   "Opponent Season:",
                                                   seasons_list,
-                                                  '2016-17')
+                                                  '2017-18')
 
                                ),
                                ## Opponent selection
