@@ -175,7 +175,7 @@ get_lineup_shots <- function(player_id_list, season, location) {
 ## response_df <- get_lineup_shots(c(kyrie_player_id, kyrie_player_id), '2016-17', '')
 ## print(NROW(response_df))
 
-get_lineup_stats <- function(measure_type, season, home_away_flag) {
+get_lineup_stats <- function(measure_type, season, home_away_flag, per_mode) {
   lineup_stats_url <- 'http://stats.nba.com/stats/leaguedashlineups'
   lineup_stats_parameters <- list(
     Conference = '',
@@ -194,7 +194,7 @@ get_lineup_stats <- function(measure_type, season, home_away_flag) {
     Outcome = '',
     PORound = 0,
     PaceAdjust = 'N',
-    PerMode = 'Totals',
+    PerMode = per_mode,
     Period = 0,
     PlusMinus = 'N',
     Rank = 'N',
@@ -205,10 +205,9 @@ get_lineup_stats <- function(measure_type, season, home_away_flag) {
     TeamID = 0,
     VsConference = '',
     VsDivision = '')
-  ## print(is.recursive(lineup_stats_parameters))
   lineup_stats_df <- nba_api_request(lineup_stats_url, lineup_stats_parameters)
   return(lineup_stats_df)
 }
 
-lineup_stats_df <- get_lineup_stats('Advanced', '2017-18', '')
+lineup_stats_df <- get_lineup_stats('Advanced', '2017-18', '', 'Totals')
 print(lineup_stats_df)
