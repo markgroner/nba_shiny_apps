@@ -713,11 +713,7 @@ server <- function(input, output, session) {
     })
     ## Fetch all team lineup shots
     team_lineup_shots <- reactive({
-        team_lineup_ids <- c(team_lineup_advanced_stats()$PLAYER_ID_1,
-                             team_lineup_advanced_stats()$PLAYER_ID_2,
-                             team_lineup_advanced_stats()$PLAYER_ID_3,
-                             team_lineup_advanced_stats()$PLAYER_ID_4,
-                             team_lineup_advanced_stats()$PLAYER_ID_5)
+      team_lineup_ids <- strsplit(team_lineup_advanced_stats()$GROUP_ID, ' - ')[[1]]
         if (input$home_road_flag == "Neutral Site") {
             location <- ""
         }
@@ -751,11 +747,7 @@ server <- function(input, output, session) {
     })
     ## Fetch all opponent lineup shots
     opponent_lineup_shots <- reactive({
-        opponent_lineup_ids <- c(opponent_lineup_advanced_stats()$PLAYER_ID_1,
-                                 opponent_lineup_advanced_stats()$PLAYER_ID_2,
-                                 opponent_lineup_advanced_stats()$PLAYER_ID_3,
-                                 opponent_lineup_advanced_stats()$PLAYER_ID_4,
-                                 opponent_lineup_advanced_stats()$PLAYER_ID_5)
+        opponent_lineup_ids <- strsplit(team_lineup_advanced_stats()$GROUP_ID, ' - ')[[1]]
         if (input$home_road_flag == "Neutral Site") {
             location <- ""
         }
